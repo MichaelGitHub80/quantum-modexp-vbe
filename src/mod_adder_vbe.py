@@ -11,6 +11,7 @@ def mod_adder_vbe(n, N_val):
     
     qc = QuantumCircuit(a, b, c, N, t)
     
+    # consider using kind="half" oder "full", as with kind="fixed" there is no borrower-bit
     adder = VBERippleCarryAdder(n, kind="fixed").to_gate(label="mod ADD")
     sub = adder.inverse()
     
@@ -24,9 +25,6 @@ def mod_adder_vbe(n, N_val):
     qc.append(sub, a[:] + b[:] + c[:])
     
     # copy subtraction overflow/borrow bit into t
-    # qc.x(b[n-1])
-    # qc.cx(b[n-1], t[0])
-    # qc.x(b[n-1])
     qc.cx(c[n-2], t[0])
     
     # if a + b <= N -> MSB = 1, add back N

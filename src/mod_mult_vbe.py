@@ -36,23 +36,7 @@ def mod_mult_vbe(n, k, N_val, mod_add):
     for i in range(n):
         qc.cswap(ctrl[0], y[i], b[i])
         
-    # uncompute work register via inverse modular adder
-    """ for i in range(n):
-        const = (k_inv * (1 << i)) % N_val
-        
-        #load  constant
-        for j in range(n):
-            if (const >> j) & 1:
-                qc.ccx(ctrl[0], y[i], a[j])
-                
-        # accumulate subtraction into work register
-        qc.append(mod_sub, a[:] + b[:] + c[:] + N[:] + [t[0]])
-        
-        # uncompute  constant
-        for j in range(n):
-            if (const >> j) & 1:
-                qc.ccx(ctrl[0], y[i], a[j]) """
-                
+    # uncompute work register via inverse modular adder                
     for i in reversed(range(n)):
         const = (k * (1 << i)) % N_val
 
