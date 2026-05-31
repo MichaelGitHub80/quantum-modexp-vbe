@@ -15,7 +15,7 @@ def mod_adder_vbe(n, N_val):
     sub = adder.inverse()
     
     qc.append(adder, a[:] + b[:] + c[:])
-    
+
     # swap registers: |a>|N> -> |N>|a>
     for i in range(n):
         qc.swap(a[i], N[i])
@@ -24,9 +24,10 @@ def mod_adder_vbe(n, N_val):
     qc.append(sub, a[:] + b[:] + c[:])
     
     # copy subtraction overflow/borrow bit into t
-    qc.x(b[n-1])
-    qc.cx(b[n-1], t[0])
-    qc.x(b[n-1])
+    # qc.x(b[n-1])
+    # qc.cx(b[n-1], t[0])
+    # qc.x(b[n-1])
+    qc.cx(c[n-2], t[0])
     
     # if a + b <= N -> MSB = 1, add back N
     # if a + b > N -> MSB = 0, keep result, add back 0
@@ -50,7 +51,8 @@ def mod_adder_vbe(n, N_val):
     qc.append(sub, a[:] + b[:] + c[:])
     
     # uncompute t
-    qc.cx(b[n-1], t[0])
+    # qc.cx(b[n-1], t[0])
+    qc.cx(c[n-2], t[0])
     
     # uncompute subtraction
     qc.append(adder, a[:] + b[:] + c[:])
