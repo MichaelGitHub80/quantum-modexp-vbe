@@ -1,56 +1,60 @@
 from qiskit import QuantumRegister, QuantumCircuit
-from qiskit.circuit.library import VBERippleCarryAdder
+from qiskit.circuit.library import VBERippleCarryAdder, CDKMRippleCarryAdder
 
-def mod_adder_vbe(n, N_val):
+def mod_adder_vbe(m, N_val):
 
-    a = QuantumRegister(n, 'a') 
-    b = QuantumRegister(n, 'b')
-    c = QuantumRegister(n-1, 'c')
-    N = QuantumRegister(n, 'N')
+    a = QuantumRegister(m, 'a') 
+    b = QuantumRegister(m, 'b')
+    c = QuantumRegister(1, 'c')
+    N = QuantumRegister(m, 'N')
     t = QuantumRegister(1, 't')
     
-    qc = QuantumCircuit(a, b, c, N, t)
+    qc = QuantumCircuit(a, b, c, N, t)  
     
-    # consider using kind="half" oder "full", as with kind="fixed" there is no borrower-bit
-    adder = VBERippleCarryAdder(n, kind="fixed").to_gate(label="mod ADD")
+    adder = CDKMRippleCarryAdder(m, kind="fixed").to_gate()
     sub = adder.inverse()
     
+    # |a>|b>|c>|N>|t> - > |a>|(a+b) mod 2^m>|c>|N>|t>
     qc.append(adder, a[:] + b[:] + c[:])
 
-    # swap registers: |a>|N> -> |N>|a>
-    for i in range(n):
+    # # |a>|b>|c>|N>|t> - > |N>|(a+b) mod 2^m>|c>|a>|t>
+    for i in range(m):
         qc.swap(a[i], N[i])
         
     # subtract N
+    # # |N>|(a+b) mod 2^m>|c>|a>|t> - > |N>|(a+b-N) mod 2^m>|c>|a>|t>
+    # s' = s - N = a + b - N
     qc.append(sub, a[:] + b[:] + c[:])
     
-    # copy subtraction overflow/borrow bit into t
-    qc.cx(c[n-2], t[0])
+    # determine whether subtraction of N led to an overflow bit in b
+    qc.x(b[m-1])
+    qc.cx(b[m-1], t[0])
+    qc.x(b[m-1])
     
-    # if a + b <= N -> MSB = 1, add back N
-    # if a + b > N -> MSB = 0, keep result, add back 0
-    for i in range(n):
+    # if a + b >= N -> MSB of b = 1, subtraction of N was correct, set a register to 0 which currently temporarily holds N
+    # if a + b < N -> MSB of b = 0, subtraction of N was incorrect, set a register to N to add back N
+    for i in range(m):
         if (N_val >> i) & 1:
             qc.cx(t[0], a[i])
             
-    # add back N or 0 depending on state of t
+    # add back N or 0 depending on state of the borrow bit t
     qc.append(adder, a[:] + b[:] + c[:])
      
     # uncompute
-    for i in range(n):
+    for i in range(m):
        if (N_val >> i) & 1:
-           qc.cx(t[0], a[i])     
+           qc.cx(t[0], a[i]) 
+   
      
     # swap registers: |N>|a> -> |a>|N>
-    for i in range(n):
+    for i in range(m):
         qc.swap(a[i], N[i])
-        
+    
     # subtract original a
     qc.append(sub, a[:] + b[:] + c[:])
     
     # uncompute t
-    # qc.cx(b[n-1], t[0])
-    qc.cx(c[n-2], t[0])
+    qc.cx(b[m-1], t[0])
     
     # uncompute subtraction
     qc.append(adder, a[:] + b[:] + c[:])
